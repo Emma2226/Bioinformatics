@@ -1,0 +1,90 @@
+QIIME 2
+
+# Enter link in browser (homepage of QIIME 2)
+https://docs.qiime2.org/2024.2/
+# INstalling QIIME 2
+# Natively installing QIIME 2
+# QIIME 2 Amplicon Distribution - Windows (via WSL)
+wget https://data.qiime2.org/distro/amplicon/qiime2-amplicon-2024.2-py38-linux-conda.yml
+mamba env create -n qiime2-amplicon-2024.2 --file qiime2-amplicon-2024.2-py38-linux-conda.yml
+# Remove installation file
+rm qiime2-amplicon-2024.2-py38-linux-conda.yml
+# To activate QIIME 2 environment
+conda activate qiime2-amplicon-2024.2
+# To deactivate an active environment
+conda deactivate
+# Go to Tutorials on the QIIME 2 website (2024.2)
+# Go to 'Moving pictures' tutorial
+cd /mnt/c/Users/eh040/Desktop/Bioinformatics/Microbiome
+# Make directory
+mkdir qiime2-moving-pictures-tutorial
+cd qiime2-moving-pictures-tutorial
+# Download metadata file
+# Scroll down to 'Sample metadata'
+wget \
+  -O "sample-metadata.tsv" \
+  "https://data.qiime2.org/2024.2/tutorials/moving-pictures/sample_metadata.tsv"
+# Make a directory for sequcences
+mkdir emp-single-end-sequences
+# Download barcode sequences
+wget \
+  -O "emp-single-end-sequences/barcodes.fastq.gz" \
+  "https://data.qiime2.org/2024.2/tutorials/moving-pictures/emp-single-end-sequences/barcodes.fastq.gz"
+# Download sequences
+wget \
+  -O "emp-single-end-sequences/sequences.fastq.gz" \
+  "https://data.qiime2.org/2024.2/tutorials/moving-pictures/emp-single-end-sequences/sequences.fastq.gz"
+
+# Navigate to Bioinformatics folder
+cd /mnt/c/Users/eh040/Desktop/Bioinformatics
+# Pushing what we have to GitHub
+pico .gitignore
+*.gz
+*.fastq
+ctrl X
+Yes
+git pull
+git status
+git add MicribiomeTutorial
+git status
+git push
+
+# Navigate into QIIME 2 Folder
+cd /mnt/c/Users/eh040/Desktop/Bioinformatics/MicrobiomeTutorial/quiime2-moving-pictures-tutorial
+# Activate environment
+mamba activate qiime2-amplicon-2024.2
+# On QIIME 2 Website, go to "Moving Pictures" tutorial
+# Scroll down to "Obtaining and Importing Data"
+# Import my files into QIIME 2 and create the artifact
+qiime tools import \
+  --type EMPSingleEndSequences \
+  --input-path emp-single-end-sequences \
+  --output-path emp-single-end-sequences.qza
+# Scroll down to Demultiplexing sequences (only do this step if you have one sequence file)
+# Demultiplex sequencing reads
+qiime demux emp-single \
+  --i-seqs emp-single-end-sequences.qza \
+  --m-barcodes-file sample-metadata.tsv \
+  --m-barcodes-column barcode-sequence \
+  --o-per-sample-sequences demux.qza \
+  --o-error-correction-details demux-details.qza
+# Creating a file for visualization (takes your demux file and outputs the visualization - will show us the quality of the sequence reads)
+qiime demux summarize \
+  --i-data demux.qza \
+  --o-visualization demux.qzv
+# To visualize the file
+qiime tools view demux.qzv (would not let me visualize)
+# In web browser:
+view.qiime2.org
+# Drag and drop file - demux.qzv
+# Single end reads - one graph / Paired end reads - two graphs
+# If using the browser, close the window, or if using the command line, hit 'q' to get your command prompt back
+# Scroll down to 'Option 1: DADA2'
+# Quality and control of reads based on histogram - Processing and trimming the sequencing reads (For this one, trimming the 5' end at 0 and the 3' end at 120 - these numbers will change based on your sequence and which section you want to keep based on quality)
+qiime dada2 denoise-single \
+  --i-demultiplexed-seqs demux.qza \
+  --p-trim-left 0 \
+  --p-trunc-len 120 \
+  --o-representative-sequences rep-seqs-dada2.qza \
+  --o-table table-dada2.qza \
+  --o-denoising-stats stats-dada2.qza
