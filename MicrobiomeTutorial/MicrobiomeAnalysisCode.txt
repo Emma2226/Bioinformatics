@@ -43,10 +43,9 @@ pico .gitignore
 *.fastq
 ctrl X
 Yes
-git pull
 git status
-git add MicribiomeTutorial
-git status
+git add MicribiomeTutorial/
+git commit -m "MicrobiomeTutorial/"
 git push
 
 # Navigate into QIIME 2 Folder
@@ -88,3 +87,153 @@ qiime dada2 denoise-single \
   --o-representative-sequences rep-seqs-dada2.qza \
   --o-table table-dada2.qza \
   --o-denoising-stats stats-dada2.qza
+# Output artifacts
+qiime metadata tabulate \
+  --m-input-file stats-dada2.qza \
+  --o-visualization stats-dada2.qzv
+# Visualize at view.qiime2.org
+# Rename the files
+mv rep-seqs-dada2.qza rep-seqs.qza
+mv table-dada2.qza table.qza
+mv stats-dada2.qzv stats.qzv
+mv stats-dada2.qza stats.qza
+
+
+# Creating visualizations for the Table and Sequences
+# Scroll down to "FeatureTable and Feature Data summaries"
+qiime feature-table summarize \
+  --i-table table.qza \
+  --o-visualization table.qzv \
+  --m-sample-metadata-file sample-metadata.tsv
+qiime feature-table tabulate-seqs \
+  --i-data rep-seqs.qza \
+  --o-visualization rep-seqs.qzv
+# View them on https://view.qiime2.org/ (Only visualize .qzv files)
+# From the table.qzv file, choose your desired bacterial organism's alpha numeric code
+# Find the code on the rep-seqs.qzv and click on the nucleotide sequence to BLAST
+
+#Generating a Phylogenetic tree
+qiime phylogeny align-to-tree-mafft-fasttree \
+  --i-sequences rep-seqs.qza \
+  --o-alignment aligned-rep-seqs.qza \
+  --o-masked-alignment masked-aligned-rep-seqs.qza \
+  --o-tree unrooted-tree.qza \
+  --o-rooted-tree rooted-tree.qza
+
+# Generate Alpha and Beta Diversity Numbers using a Sampling Depth of 1103
+# Scroll down to "Alpha and beta diveristy analysis"
+# We can change the sampling depth ("1103" - the minimum length of the reads it will pull) If you pick too low of a number, you might miss a lot of diveristy in the larger reads, but if you choose a numbe too high, it will exclude the reads that are not long enough
+qiime diversity core-metrics-phylogenetic \
+  --i-phylogeny rooted-tree.qza \
+  --i-table table.qza \
+  --p-sampling-depth 1103 \
+  --m-metadata-file sample-metadata.tsv \
+  --output-dir core-metrics-results
+
+# Uploading files to GitHub
+# You can upload files straight to a repository on GitHub by dragging and dropping them into the uploads area and then committing them
+# If you make changes to the repository on the web browser, then do git pull on the command line to update it there as well
+git pull
+# *Make sure the file is closed before pulling
+
+# navigate into Bioinformatics Folder
+cd /mnt/c/Users/eh040/Desktop/Bioinformatics
+git add *
+git stash
+git pull
+# navigate into moving picures folder
+cd /mnt/c/Users/eh040/Desktop/Bioinformatics/MicrobiomeTutorial/qiime2-moving-pictures-tutorial
+# activate qiime 2 environment
+ mamba activate qiime2-amplicon-2024.2
+
+# go to QIIME 2 Tutorial website
+https://docs.qiime2.org/2024.2/tutorials/moving-pictures/
+# Scroll down to Alpha and Beta Diversity Analysis
+# core metric results folder into viualization website (https://view.qiime2.org/)
+# upload bray_curtis_emperor.qzv file (on QIIME 2 Tutorial website - Alpha and Beta Diversity Analysis)
+
+# Alpha Diversity Significance
+qiime diversity alpha-group-significance \
+  --i-alpha-diversity core-metrics-results/faith_pd_vector.qza \
+  --m-metadata-file sample-metadata.tsv \
+  --o-visualization core-metrics-results/faith-pd-group-significance.qzv
+
+qiime diversity alpha-group-significance \
+  --i-alpha-diversity core-metrics-results/evenness_vector.qza \
+  --m-metadata-file sample-metadata.tsv \
+  --o-visualization core-metrics-results/evenness-group-significance.qzv
+
+# Beta Diversity Significance
+qiime diversity beta-group-significance \
+  --i-distance-matrix core-metrics-results/unweighted_unifrac_distance_matrix.qza \
+  --m-metadata-file sample-metadata.tsv \
+  --m-metadata-column body-site \
+  --o-visualization core-metrics-results/unweighted-unifrac-body-site-significance.qzv \
+  --p-pairwise
+
+qiime diversity beta-group-significance \
+  --i-distance-matrix core-metrics-results/unweighted_unifrac_distance_matrix.qza \
+  --m-metadata-file sample-metadata.tsv \
+  --m-metadata-column subject \
+  --o-visualization core-metrics-results/unweighted-unifrac-subject-group-significance.qzv \
+  --p-pairwise
+
+# Taxonomic Analysis
+# Scroll down to 'Taxonomic Analysis' on the QIIME 2 tutorials website
+# Download QIIME classifier artifiact (wget)
+wget \
+  -O "gg-13-8-99-515-806-nb-classifier.qza" \
+  "https://data.qiime2.org/2024.2/common/gg-13-8-99-515-806-nb-classifier.qza"
+# Refseqs artifact & compare it to the downloaded file
+qiime feature-classifier classify-sklearn \
+  --i-classifier gg-13-8-99-515-806-nb-classifier.qza \
+  --i-reads rep-seqs.qza \
+  --o-classification taxonomy.qza
+
+qiime metadata tabulate \
+  --m-input-file taxonomy.qza \
+  --o-visualization taxonomy.qzv
+# Taxonomy barplot
+qiime taxa barplot \
+  --i-table table.qza \
+  --i-taxonomy taxonomy.qza \
+  --m-metadata-file sample-metadata.tsv \
+  --o-visualization taxa-bar-plots.qzv
+
+# Differential Abundance Testing with ANCOM-BC
+# Scroll down to 'Differential Abundance Testing with ANCOM-BC' in QIIME tutorial
+# Filter for gut-only
+qiime feature-table filter-samples \
+  --i-table table.qza \
+  --m-metadata-file sample-metadata.tsv \
+  --p-where "[body-site]='gut'" \
+  --o-filtered-table gut-table.qza
+# Differential Abundance (between the two subjects)
+qiime composition ancombc \
+  --i-table gut-table.qza \
+  --m-metadata-file sample-metadata.tsv \
+  --p-formula 'subject' \
+  --o-differentials ancombc-subject.qza
+
+qiime composition da-barplot \
+  --i-data ancombc-subject.qza \
+  --p-significance-threshold 0.001 \
+  --o-visualization da-barplot-subject.qzv
+# Collapse to a specific taxonomic level (Abundance at genus level)
+qiime taxa collapse \
+  --i-table gut-table.qza \
+  --i-taxonomy taxonomy.qza \
+  --p-level 6 \
+  --o-collapsed-table gut-table-l6.qza
+
+qiime composition ancombc \
+  --i-table gut-table-l6.qza \
+  --m-metadata-file sample-metadata.tsv \
+  --p-formula 'subject' \
+  --o-differentials l6-ancombc-subject.qza
+
+qiime composition da-barplot \
+  --i-data l6-ancombc-subject.qza \
+  --p-significance-threshold 0.001 \
+  --p-level-delimiter ';' \
+  --o-visualization l6-da-barplot-subject.qzv
