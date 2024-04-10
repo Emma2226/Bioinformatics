@@ -237,3 +237,10 @@ qiime composition da-barplot \
   --p-significance-threshold 0.001 \
   --p-level-delimiter ';' \
   --o-visualization l6-da-barplot-subject.qzv
+
+# Push everything to GitHub
+git status
+git add *
+git status (should be all green)
+git commit -m "additional microbiome files"
+git push

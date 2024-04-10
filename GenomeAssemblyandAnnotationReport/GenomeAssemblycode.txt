@@ -1,0 +1,62 @@
+Assembly Code
+
+# ABySS
+# Activate mamba genome analysis environment
+mamba activate genomeassembly
+# Install ABySS
+mamba install -c bioconda -c conda-forge abyss
+# Navigate into the folder with your sequencing reads
+cd /mnt/c/Users/eh040/Desktop/Bioinformatics/GenomeAssemblyandAnnotationReport/Sequences
+# Running ABySS (pe=paired end reads; k=k-mer; B=memory amount; in=input)
+abyss-pe name=unknowngenome k=96 B=2G in='Genomereads1.fastq Genomereads2.fastq'
+
+# SPAdes
+# Go to https://usegalaxy.eu/
+# Upload Data under 'Tools'
+# Upload the two reads files
+# Navigate to the SPAdes genome assembler
+# Choose 'Paired-ends: individual data sets'
+# Select the first reads file for the forward reads and the second reads file for the reverse reads
+# RunTool
+
+# Quast
+# Run BLAST from SPAdes output to figure out what genome it is
+# Download reference genome and reference annotation
+# Upload to Galaxy
+# Choose Quast Genome assembly Quality under tools
+# Select your reference genome under 'Reference Genome'
+# Select your reference annotation under 'Genomic feature positions in the reference genome' and 'Operon positions in the reference genome'
+# Select 'yes' for scaffolds rather than contigs
+# Select 'GeneMarkS' under 'Tool for gene prediction'
+# Select 'yes' for 'Enables ribosomal RNA gene finding'
+# Select 'yes' for 'Enables search for Universal Single-Copy Orthologs using BUSCO'
+# Do the same for the ABySS output, but use the '[name]-8.fa' file from ABySS
+
+# Prokka
+# Activate genome assembly environment
+mamba activate genomeassembly
+# Install Prokka (if not done already)
+mamba install -c conda-forge -c bioconda -c defaults prokka
+# Navigate into the genome assembly folder you are working in
+cd /mnt/c/Users/eh040/Desktop/Bioinformatics/GenomeAssemblyandAnnotationReport
+# Run Prokka ('prokka'=calls the program; '--outdir ProkkaAnnotation'=creates an output directory that is called 'ProkkaAnnotation'; '--prefix klebsiella'=gives the files a prefix name 'kebsiella'; 'ABySSOutput/unknowngenome-8.fa'=tells the program which file we want it to annotate in the ABySSOutput folder)
+prokka --outdir ProkkaAnnotation --prefix klebsiella ABySSOutput/unknowngenome-8.fa
+
+# RAST
+# In the upper menu, select 'Upload New Job' under 'Your Jobs'
+# Upload your sequence file (ex: unknowngenome-8.fa)
+# Look up your species using NCBI taxonomy in order to obtain the Taxonomy ID
+# Click 'Fill in form based on NCBI taxonomy-ID'
+# Select 'yes' for building a metabolic model and computing similarities
+
+# Upload to GitHub
+# Navigate into your Bioinformatics folder
+cd /mnt/c/Users/eh040/Desktop/Bioinformatics
+git init .
+pico. gitignore
+# make sure to exclude .gz and .fastq files
+git status
+git add 'file name'
+git status
+git commit -m "genome assembly and annotation report"
+git push
