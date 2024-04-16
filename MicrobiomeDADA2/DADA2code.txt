@@ -1,0 +1,24 @@
+DADA2 Microbiome Data Processing
+
+# Navigate to https://benjjneb.github.io/dada2/
+# Copy the demux.qza and sample-metadata.tsv files from the MicrobiomeTutorial into the MicrobiomeDADA2 folder
+# Open the .tsv file in Excel, delete the second row and save it as a .csv file
+
+# Activate qiime 2 environment
+conda activate qiime2-amplicon-2024.2
+# Exporting a feature table
+qiime tools export --input-path demux.qza --output-path sequences
+
+# Create an R Markdown pdf
+# Open R Studios
+# File -> New File -> R Markdown
+# Session -> Set Working Directory -> Choose Directory -> MicrobiomeDADA2
+# Enter the code below, found on DADA2 website, into R Studio script
+if (!requireNamespace("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+BiocManager::install("dada2", version = "3.18")
+# In Markdown file, delete everything below line 6 and hit enter to reach line 8
+# '# ____' makes a header
+# '```{r}' beginning of chunk
+# '```' close chunk
+# '<-' setting the variable
