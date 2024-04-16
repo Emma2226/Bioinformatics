@@ -1,3 +1,0 @@
-Organism Scientific Name	Organism Common Name	Organism Qualifier	Taxonomy id	Assembly Name	Assembly Accession	Source	Annotation	Level	Contig N50	Size	Submission Date	Gene Count	BioProject	BioSample
-Clostridium tetanomorphum		strain: DSM 4474	1553	ASM1787321v1	GCA_017873215.1	GenBank	Annotation submitted by DOE Joint Genome Institute	Contig	152605	4374054	2021-04-08	4333	PRJNA709591	SAMN18250244
-Clostridium tetanomorphum		strain: DSM 4474	1553	ASM1787321v1	GCF_017873215.1	RefSeq	NCBI Prokaryotic Genome Annotation Pipeline (PGAP)	Contig	152605	4374054	2021-04-08	4259	PRJNA709591	SAMN18250244
