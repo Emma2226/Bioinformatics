@@ -92,3 +92,10 @@ load("RData/seqtab.nochim.RData")
 # Assign taxonomy
 ```{r}
 # download the Silva species database from https://zenodo.org/records/4587955
+taxa <- assignTaxonomy(seqtab.nochim, "silva_nr99_v138.1_wSpecies_train_set.fa.gz")
+```
+
+# Save taxonomy as a file
+```{r}
+save(taxa, file = "RData/taxa.RData")
+```
