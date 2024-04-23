@@ -13,6 +13,14 @@ BiocManager::install("phyloseq")
 library(phyloseq)
 library(dplyr)
 library(BiMiCo)
+library(ggplot2)
+# You probably have to install BiMiCo before you can load it. The code for installing BiMiCo can be found near the end of this document
+```
+
+# Load taxa and seqtab.nochim
+```{r}
+load("RData/taxa.RData")
+load("RData/seqtab.nochim.RData")
 ```
 
 # Import metadata
@@ -29,7 +37,7 @@ physeq
 
 # Transform sample counts
 ```{r}
-# convert from raw to relative abundance (percentage)
+# convert from raw to relative abundance
 physeq <- transform_sample_counts(physeq, function(abund) 1*(abund>0))
 physeq
 ```
@@ -65,3 +73,116 @@ physeq
 ```{r}
 save(physeq, file="RData/physeq.RData")
 ```
+
+# Pushing to GitHub
+# Open Ubuntu
+# Navigate to bioinformatics folder (insert your own user name after /Users/)
+cd /mnt/c/Users/eh040/Desktop/Bioinformatics
+git status
+# To upload all of the MicrobiomeDADA2 files, type in "git add filename". You'll have to do each one individually
+# Once previous step is completed:
+git status
+# All the files you want to upload should be listed in green
+git commit -m "phyloseq"
+git push
+
+# Load physeq objects to start here
+```{r}
+load("RData/physeq.RData")
+```
+
+# Plot bar graph based on phylum
+```{r}
+plot_bar(physeq, fill = "Phyum") + geom_bar(aes(color=Phylum, fill=Phylum), stat="identity", position="fill")
+```
+
+# Create a barplot of realative abundance
+```{r}
+# convert to relative abundance
+physeq_relabund <- transform_sample_counts(physeq, function(x) x / sum(x))
+
+# barplot
+plot_bar(physeq_relabund, fill = "Phylum") + geom_bar(aes(color=Phylum, fill=Phylum), stat="identity", position="fill") + facet_wrap(~body.site, scales = "free")
+```
+
+# Plot alpha diversity based on body site
+```{r}
+plot_richness(physeq, x="body.site", color= "subject", measures=c("Observed","Simpson", "Shannon"))
+```
+
+# Plot alpha diversity based on reported antibitic usage
+```{r}
+plot_richness(physeq, x="reported.antibiotic.usage", color= "body.site", measures=c("Observed","Simpson", "Shannon"))
+```
+
+# Plot alpha diversity based on subject
+```{r}
+plot_richness(physeq, x="subject", color= "body.site", measures=c("Observed","Simpson", "Shannon"))
+```
+
+# Test for normality
+# For every sample, it pulls out the richness categories we are interested in
+```{r}
+alpha <- estimate_richness(physeq, measures=c("Observed","Simpson", "Shannon"))
+
+# shapiro-wilk
+# A particular test for normality used if there are less than 50 samples
+# $ sign tells the computer which column to do the test on
+# Null hypothesis is that the data are normally distributed; Alternative hypothesis is that the data are not normally distributed (p-value < 0.05 = data is not normally distributed; p-value > 0.05 = data is normally distributed)
+observed <- shapiro.test(alpha$Observed)
+shannon <- shapiro.test(alpha$Shannon)
+simpson <- shapiro.test(alpha$Simpson)
+
+# print
+print(observed)
+print(shannon)
+print(simpson)
+```
+
+# Create data frames for statistical analysis
+# merges metadata file with diversity indexes
+```{r}
+# extract sample information from the physeq object
+samples <- sample_data(physeq)
+
+# if samples is a phyloseq sample_data object, convert it to a data frame
+if (class(samples) == "sample_data") {samples <- data.frame(sample_data(samples))}
+
+# add a column to alpha with sample names
+alpha$sample <- rownames(alpha)
+
+# merge alpha diversity data and sample data
+alpha <- merge(alpha, samples, by = "sample")
+```
+
+# Perform statistics based on subject
+# t test is only appropriate when your data is normally distributed
+# most common test for two data comparisons for not normally distributed data is the wilcox test
+```{r}
+# perform t/wilcox tests for each biodiversity index
+test_observed <- wilcox.test(Observed ~ subject, data = alpha)
+test_simpson <- wilcox.test(Simpson ~ subject, data = alpha)
+test_shannon <- t.test(Shannon ~ subject, data = alpha)
+
+# printing the results
+print(test_observed)
+print(test_simpson)
+print(test_shannon)
+```
+# there are no significant differences in diversity between the two subjects
+
+# Statistics on reported.antibiotic.usage
+```{r}
+# perform t/wilcox tests for each biodiversity index
+test_observed <- wilcox.test(Observed ~ reported.antibiotic.usage, data = alpha)
+test_simpson <- wilcox.test(Simpson ~ reported.antibiotic.usage, data = alpha)
+test_shannon <- t.test(Shannon ~ reported.antibiotic.usage, data = alpha)
+
+# printing the results
+print(test_observed)
+print(test_simpson)
+print(test_shannon)
+```
+# there is a significant diversity between antibiotic treated and untreated samples
+
+
