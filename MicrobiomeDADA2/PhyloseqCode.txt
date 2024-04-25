@@ -14,6 +14,7 @@ library(phyloseq)
 library(dplyr)
 library(BiMiCo)
 library(ggplot2)
+library(MicEco)
 # You probably have to install BiMiCo before you can load it. The code for installing BiMiCo can be found near the end of this document
 ```
 
@@ -185,4 +186,110 @@ print(test_shannon)
 ```
 # there is a significant diversity between antibiotic treated and untreated samples
 
+# Three or more groups, use ANOVA test if your data is normally distributed. If your data are not normally distributed, then use a kruskal wallace test.
+# Just doing ANOVA or kruskal wallace just tells you there is something significantly different. You can identify which comparisons are significantly different using the posthawk test. For non normally distributed data, it is pairwise wilcox test (or Tukey test for ANOVA)
+# Test for body site
+```{r}
+kruskal.test(Simpson ~ body.site, data=alpha)
+pairwise.wilcox.test(alpha$Simpson, alpha$body.site, p.adjust.method="holm")
+kruskal.test(Observed ~ body.site, data=alpha)
+pairwise.wilcox.test(alpha$Observed, alpha$body.site, p.adjust.method="holm")
+shannonanova <- aov(Shannon ~ body.site, data=alpha)
+summary(shannonanova)
+TukeyHSD(shannonanova)
+```
 
+# Remove taxa with relative abundance <0.005%
+```{r}
+minTotRelAbun = .00005
+x = taxa_sums(physeq)
+keepTaxa = (x / sum(x)) > minTotRelAbun
+physeqprune = prune_taxa(keepTaxa, physeq)
+physeqprune
+```
+
+# Install Devtools (in console)
+install.packages("devtools")
+library(devtools)
+install_github("Russel88/MicEco)
+
+# Number of shared ASVs body.site (found in 25% or more)
+```{r}
+bodysite=ps_venn(
+  physeqprune,
+  "body.site",
+  fraction = .25,
+  weight = FALSE,
+  relative = TRUE,
+  plot = TRUE
+)
+bodysite
+```
+
+# Bray Curtis dissimilarity is the metric for doing beta diversity calculation. Wil give us a value between 0 ad 1. 0 means they are completely identical, and 1 means highest level of dissimilarity, nothing is the same.
+# Set the seed in order to get the same number every time and make the data reproducable (can use any number, does not have to be 777)
+# NMDS = Nonmetric Multidimentional scaling
+# Bray Curtis Calculation
+```{r message=FALSE}
+set.seed(777)
+dist = phyloseq::distance(physeqprune, method="bray", weighted=TRUE)
+ordination = ordinate(physeqprune, method="NMDS", distance=dist)
+```
+
+# Bray Curtis Subject Plot
+```{r}
+braysubject=plot_ordination(physeqprune, ordination, color="subject") + theme_classic() + theme(strip.background = element_blank()) + stat_ellipse(aes(group=subject))
+braysubject
+```
+
+# Bray Curtis Body Site Plot
+```{r}
+braybodysite=plot_ordination(physeqprune, ordination, color="body.site") + theme_classic() + theme(strip.background = element_blank()) + stat_ellipse(aes(group=body.site))
+braybodysite
+```
+
+# Bray Curtis Antibiotic Usage Plot
+```{r}
+brayabusage=plot_ordination(physeqprune, ordination, color="reported.antibiotic.usage") + theme_classic() + theme(strip.background = element_blank()) + stat_ellipse(aes(group=reported.antibiotic.usage))
+brayabusage
+```
+
+# Installing vegan (in console)
+install.packages("vegan")
+library(vegan)
+
+# Bray curtis Subject Statistics
+# Testing whether or not there is a significant differents between the reuslts of test subject 1 and 2
+# Significance value Pr(>F) = 0.155 > 0.05, no significant difference between subject 1 and subject 2
+```{r}
+adonis2(dist ~ sample_data(physeqprune)$subject)
+```
+
+
+# The top line is sufficient for comparing only two things the rest of the lines tell us which communities of the four are different from one another.
+# The top line tells us if there is a significant difference and the following lines tell us where the difference is
+# You always want to look at the permuted p-values
+# Bray Curtis Body Site Statistics
+```{r}
+adonis2(dist ~ sample_data(physeqprune)$body.site)
+ps.disper<-betadisper(dist, sample_data(physeqprune)$body.site)
+permutest(ps.disper, pair=TRUE)
+```
+
+# Bray Curtis Antibiotic Usage Statistics
+```{r}
+adonis2(dist ~ sample_data(physeqprune)$reported.antibiotic.usage)
+```
+
+# Exporting figures as images
+# Export Tiff with 300dpi
+```{r}
+ggsave(
+  filename="Fig1.tiff",
+  plot = braybodysite,
+  width = 200,
+  height = 200,
+  units = c("mm"),
+  dpi = 300,
+)
+```
