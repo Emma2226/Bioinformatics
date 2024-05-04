@@ -1,0 +1,154 @@
+Microbiome Section Report Code
+
+# Activate qiime environment
+# This creates a working space to run all the qiime2 code
+mamba activate qiime2-amplicon-2024.2
+
+# Navigate into folder
+cd /mnt/c/Users/eh040/Desktop/Bioinformatics/MicrobiomeSectionReport
+
+# Creating a file for visualization
+# The function of this code is to take the downloaded demux file and generate a visualization of the sequence reads quality
+# This visualization will allow me to calculate the p-trim-left and p-trunc-left values for both the forward and reverse reads
+qiime demux summarize \
+  --i-data demux.qza \
+  --o-visualization demux.qzv
+
+# Sequence trimming and feature table construction
+# The function of this code is to trim the sequence reads and get rid of the low quality regions
+# It uses the demux file that I downloaded and the values that I chose by looking at the demux visualization file
+# I will need the rep-seqs.qza and table.qza files to create a visualization of feature tables and sequence tables.
+qiime dada2 denoise-paired \
+  --i-demultiplexed-seqs demux.qza \
+  --p-trim-left-f 25 \
+  --p-trunc-len-f 210 \
+  --p-trim-left-r 25 \
+  --p-trunc-len-r 220 \
+  --o-representative-sequences rep-seqs.qza \
+  --o-table table.qza \
+  --o-denoising-stats stats.qza
+
+# Feature Table and Feature Data summaries
+# The function of this code is to generate a visualization of the table.qza that was previously generated
+# It uses the table.qza file as well as my metadata.txt file
+# It will allow me to determine my sampling depth, create a taxonomy bar plot, and create the core-metrics-results file that I will use for diversity tests
+qiime feature-table summarize \
+  --i-table table.qza \
+  --o-visualization table.qzv \
+  --m-sample-metadata-file metadata.txt
+# The function of this code is to generate a visualization of the rep-seqs.qza file that was previously generated
+# It uses the rep-seqs.qza file
+# It will allow me to create my taxonomy.qza file and phylogenetic trees
+qiime feature-table tabulate-seqs \
+  --i-data rep-seqs.qza \
+  --o-visualization rep-seqs.qzv
+
+# The function of this code is to download a classifier database that the sequences in the rep-seqs.qza file will be compared to in order to conduct taxonomic analysis
+wget \
+  -O "gg-13-8-99-515-806-nb-classifier.qza" \
+  "https://data.qiime2.org/2024.2/common/gg-13-8-99-515-806-nb-classifier.qza"
+
+# The function of this code is to compare the sequences in the rep-seqs.qza file to the classifier database in order to identify the different species that could be in my sample based on the similarity in sequences
+# It uses the classifier database and my rep-seqs.qza file that contains my sequences
+# It generates a taxonomy file
+qiime feature-classifier classify-sklearn \
+  --i-classifier gg-13-8-99-515-806-nb-classifier.qza \
+  --i-reads rep-seqs.qza \
+  --o-classification taxonomy.qza
+
+# The function of this code it to generate a visualization of my taxonomy.qza file that was previously generated
+# This will allow me to see what taxa the sequences of my features align with which I can sort by confidence level
+qiime metadata tabulate \
+  --m-input-file taxonomy.qza \
+  --o-visualization taxonomy.qzv
+
+# The function of this code should be to filter out the mitochondrial and chloroplast sequences from the taxonomy similarity results. However, this does not work because the table.qza file was used instead of the rep-seqs.qza file from which it was generated. In order to filter out the mitochondrial and chloroplast sequences, the rep-seqs.qza file should be inputed
+qiime taxa filter-table \
+  --i-table table.qza \
+  --i-taxonomy taxonomy.qza \
+  --p-exclude mitochondria,chloroplast \
+  --o-filtered-table table.qza
+
+# The function of this code is to create a visualization that organizes the results from my taxonomy.qza file into a barplot
+# It uses my table.qza file, taxonomy.qza file, and metadata.txt file
+# This will allow me to better visualize the abundance of different species that show similarities to the sequences in my sample
+qiime taxa barplot \
+  --i-table table.qza \
+  --i-taxonomy taxonomy.qza \
+  --m-metadata-file metadata.txt \
+  --o-visualization taxa-bar-plots.qzv
+
+# Generating phylogenetic trees
+# The function of this code is to generate both rooted a unrooted phylogenetic trees
+# It uses my rep-seqs.qza file to do this
+# I will be able to use the rooted tree file to generate the files I need to perform diversity analysis
+qiime phylogeny align-to-tree-mafft-fasttree \
+  --i-sequences rep-seqs.qza \
+  --o-alignment aligned-rep-seqs.qza \
+  --o-masked-alignment masked-aligned-rep-seqs.qza \
+  --o-tree unrooted-tree.qza \
+  --o-rooted-tree rooted-tree.qza
+
+# Alpha and beta diversity files
+# The function of this code is to generate the files I will need to run alpha and beta diversity tests
+# It uses my rooted phylogenetic tree, feature table file, and metadata file
+# The sampling depth (determined using the table.qzv file) tells the software to exclude sequence reads that are less than 2713
+# All of the output files that are generated will be filed into a folder called core-metrics-results
+qiime diversity core-metrics-phylogenetic \
+  --i-phylogeny rooted-tree.qza \
+  --i-table table.qza \
+  --p-sampling-depth 2713 \
+  --m-metadata-file metadata.txt \
+  --output-dir core-metrics-results
+
+# Alpha diversity - Shannon diversity
+# The function of this code is to run a Shannon diversity index test on the sequences to measure the richness and eveness of the sample
+# It uses the shannon_vector.qza file from the core-metrics-results file previously generated as well as my metadata.txt file
+# It generates a visualization of the Shannon diversity index results including significance values and box and whisker plots. This will allow me to determine if the diversity in regards to richness and evenness is significant or not
+qiime diversity alpha-group-significance \
+  --i-alpha-diversity core-metrics-results/shannon_vector.qza \
+  --m-metadata-file metadata.txt \
+  --o-visualization core-metrics-results/shannon-group-significance.qzv
+
+# Alpha diversity - Observed features
+# The function of this code is to run an Observed features test on the sequences to measure the richness of the sample
+# It uses the observed_features_vector.qza file from the core-metrics-results file previously generated as well as my metadata.txt file
+# It generates a visualization of the Observed features results including significance values and box and whisker plots. This will allow me to determine if the diversity in regards to richness is significant or not
+qiime diversity alpha-group-significance \
+  --i-alpha-diversity core-metrics-results/observed_features_vector.qza \
+  --m-metadata-file metadata.txt \
+  --o-visualization core-metrics-results/observed-features-group-significance.qzv
+
+# Beta diversity - Bray-Curtis distance
+# The function of this code is to run a Bray-Curtis distance test on the sequences to measure the diversity in terms of community dissimilarity between the samples
+# It uses the bray_curtis_distance_matrix.qza file from the core-metrics-results file previously generated as well as my metadata-txt file
+# In the meta data file, it is running the test on the sex column
+# It generates a visualization of the diversity in regards to dissimilarity between sex in the sample that includes box and whisker plots and significance values. This will allow me to determine if the diversity in sex is significant or not
+qiime diversity beta-group-significance \
+  --i-distance-matrix core-metrics-results/bray_curtis_distance_matrix.qza \
+  --m-metadata-file metadata.txt \
+  --m-metadata-column sex \
+  --o-visualization core-metrics-results/bray-curtis-sex-significance.qzv \
+  --p-pairwise
+
+# The function of this code is to run a Bray-Curtis distance test on the sequences to measure the diversity in terms of community dissimilarity between the samples
+# It uses the bray_curtis_distance_matrix.qza file from the core-metrics-results file previously generated as well as my metadata-txt file
+# In the meta data file, it is running the test on the population column
+# It generates a visualization of the diversity in regards to dissimilarity between populations in the sample that includes box and whisker plots and significance values. This will allow me to determine if the diversity in population is significant or not
+qiime diversity beta-group-significance \
+  --i-distance-matrix core-metrics-results/bray_curtis_distance_matrix.qza \
+  --m-metadata-file metadata.txt \
+  --m-metadata-column population \
+  --o-visualization core-metrics-results/bray-curtis-population-significance.qzv \
+  --p-pairwise
+
+# The function of this code is to run a Bray-Curtis distance test on the sequences to measure the diversity in terms of community dissimilarity between the samples
+# It uses the bray_curtis_distance_matrix.qza file from the core-metrics-results file previously generated as well as my metadata-txt file
+# In the meta data file, it is running the test on the flock column
+# It generates a visualization of the diversity in regards to dissimilarity between flocks in the sample that includes box and whisker plots and significance values. This will allow me to determine if the diversity in flock is significant or not
+qiime diversity beta-group-significance \
+  --i-distance-matrix core-metrics-results/bray_curtis_distance_matrix.qza \
+  --m-metadata-file metadata.txt \
+  --m-metadata-column flock \
+  --o-visualization core-metrics-results/bray-curtis-flock-significance.qzv \
+  --p-pairwise
