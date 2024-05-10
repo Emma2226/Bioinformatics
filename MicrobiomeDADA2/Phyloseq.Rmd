@@ -57,7 +57,7 @@ taxa_names(physeq) <- paste0("ASV", seq(ntaxa(physeq)))
 physeq
 ```
 
-# Remove mitochondria and chloroplast matches. Remove all non bacterial sequences
+# Remove mitochondria and chloroplast matches.
 ```{r}
 physeq <- physeq %>% subset_taxa( Family!= "Mitochondria" | is.na(Family) & Order!="Chloroplast" | is.na(Order) )
 physeq
